@@ -1,0 +1,28 @@
+{
+  "name": "fpa-tracker",
+  "version": "1.0.0",
+  "description": "Forest Practice Applications Lifecycle Tracker",
+  "main": "backend/server.js",
+  "scripts": {
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ..",
+    "start": "node backend/server.js",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "cd backend && npm start",
+    "frontend": "cd frontend && npm start",
+    "build": "cd frontend && npm run build",
+    "vercel-build": "cd frontend && npm install && npm run build"
+  },
+  "keywords": [
+    "forest",
+    "practice",
+    "applications",
+    "fpa",
+    "tracker",
+    "lifecycle"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.0.1"
+  }
+}

@@ -1,0 +1,11 @@
+node_modules/
+backend/fpa.db
+build/
+dist/
+*.log
+.DS_Store
+.env
+.env.local
+frontend/build/
+.cache/
+.vercel
