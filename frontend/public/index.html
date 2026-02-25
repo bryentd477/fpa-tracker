@@ -2,14 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#1f2937" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#6FA050" />
     <meta name="description" content="Forest Practice Applications Tracker" />
-    <meta name="apple-mobile-web-app-capable" content="true" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="FPA Tracker" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231f2937' width='180' height='180'/><text x='50%' y='50%' font-size='90' fill='white' text-anchor='middle' dominant-baseline='central' font-family='Arial'>🌲</text></svg>" />
+    <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/icon.svg" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/icon-192x192.png" />
     <title>FPA Tracker</title>
     <style>
       * {
@@ -55,5 +57,29 @@
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+    <script>
+      // Enable Screen Orientation API for landscape/portrait rotation (iOS + Android)
+      try {
+        if (screen.orientation && screen.orientation.unlock) {
+          screen.orientation.unlock().catch(err => console.log('Orientation unlock failed:', err));
+        }
+      } catch (e) {
+        console.log('Screen orientation API not available:', e);
+      }
+      
+      // Force CSS media queries to re-evaluate on orientation change
+      window.addEventListener('orientationchange', () => {
+        // Trigger a repaint by toggling a class
+        document.documentElement.classList.add('orientation-changing');
+        setTimeout(() => {
+          document.documentElement.classList.remove('orientation-changing');
+        }, 100);
+      });
+      
+      // Also listen for resize events (more compatible)
+      window.addEventListener('resize', () => {
+        document.documentElement.dispatchEvent(new Event('orientationchange', { bubbles: true }));
+      });
+    </script>
   </body>
 </html>

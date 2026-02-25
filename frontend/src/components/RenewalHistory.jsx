@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-function RenewalHistory({ renewals, fpaId, onAdd, onDelete }) {
+function RenewalHistory({ renewals, fpaId, onAdd, onDelete, showAdd = true }) {
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({
     renewalDate: '',
@@ -24,22 +24,34 @@ function RenewalHistory({ renewals, fpaId, onAdd, onDelete }) {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString();
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '-';
+    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+  };
+
+  const formatDateTime = (dateValue) => {
+    if (!dateValue) return '-';
+    const parsed = dateValue?.toDate?.() ? dateValue.toDate() : new Date(dateValue);
+    if (Number.isNaN(parsed.getTime())) return '-';
+    return `${parsed.getMonth() + 1}/${parsed.getDate()}/${parsed.getFullYear()} ${parsed.getHours()}:${parsed.getMinutes().toString().padStart(2, '0')}:${parsed.getSeconds().toString().padStart(2, '0')}`;
   };
 
   return (
     <div className="renewal-history">
       <div className="section-header">
         <h3>Renewal History</h3>
-        <button
-          className="btn-secondary"
-          onClick={() => setIsAdding(!isAdding)}
-        >
-          {isAdding ? 'Cancel' : '+ Add Renewal'}
-        </button>
+        {showAdd && (
+          <button
+            className="btn-secondary"
+            onClick={() => setIsAdding(!isAdding)}
+          >
+            {isAdding ? 'Cancel' : '+ Add Renewal'}
+          </button>
+        )}
       </div>
 
-      {isAdding && (
+      {showAdd && isAdding && (
         <form onSubmit={handleSubmit} className="renewal-form">
           <div className="form-group">
             <label htmlFor="renewalDate">Renewal Date</label>
@@ -82,6 +94,7 @@ function RenewalHistory({ renewals, fpaId, onAdd, onDelete }) {
             <div key={renewal.id} className="renewal-item">
               <div className="renewal-content">
                 <h4>{formatDate(renewal.renewalDate)}</h4>
+                <p>Entered: {formatDateTime(renewal.createdAt)}</p>
                 {renewal.notes && <p>{renewal.notes}</p>}
               </div>
               <button

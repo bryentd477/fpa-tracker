@@ -1,11 +1,63 @@
+# Dependencies
 node_modules/
-backend/fpa.db
-build/
-dist/
-*.log
-.DS_Store
+package-lock.json
+yarn.lock
+
+# Production
+/frontend/build
+/frontend/dist
+.firebaserc
+.firebase/
+
+# Environment variables
 .env
 .env.local
-frontend/build/
-.cache/
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Firebase
+firebase-debug.log
+*-adminsdk-*.json
+serviceAccountKey.json
+fpa-tracker-firebase-adminsdk-fbsvc-cdce50fbbf.json
+
+# SSL/Certificates
+*.pem
+proxy-cert.pem
+
+# Temporary/Debug files
+test-deploy.js
+deploy.js
+deploy-custom.js
+deploy-sdk.js
+check-cert.js
+extract-cert.js
+firebase-patched.js
+firebase-patched-loader.js
+firebase-deploy.bat
+firebase-deploy.js
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Vercel
 .vercel
+
+# Local development
+/functions/node_modules

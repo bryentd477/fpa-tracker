@@ -166,6 +166,53 @@ fpa/
 - Click any FPA card to view full details
 - Color-coded status indicators for quick reference
 
+## AI Chatbot Configuration (Optional)
+
+The FPA Tracker includes an intelligent chatbot assistant that can:
+- **Execute FPA commands**: Add, view, update, delete FPAs using natural language
+- **Answer general questions**: When configured with Google Gemini AI, chat about anything
+- **Voice input**: Use your voice for hands-free interaction
+
+### Basic Usage (No Setup Required)
+The chatbot works out-of-the-box with FPA-specific commands:
+- "Add FPA 2819234 landowner Smith timber sale Pine Ridge"
+- "Set FPA 2819234 status to Approved"
+- "Show me FPA 2819234"
+- "Delete FPA 2819234"
+
+### Enabling AI Chat (Free Google Gemini API)
+To enable general AI conversations beyond FPA commands:
+
+1. **Get a free Google Gemini API key:**
+   - Go to https://makersuite.google.com/app/apikey
+   - Sign in with your Google account
+   - Click "Create API Key"
+   - Copy the generated key
+
+2. **Configure the app:**
+   - Open `frontend/.env` file in a text editor
+   - Replace `REACT_APP_GEMINI_API_KEY=` with `REACT_APP_GEMINI_API_KEY=your_api_key_here`
+   - Save the file
+
+3. **Rebuild and restart:**
+   ```
+   npm run build
+   npm start
+   ```
+
+4. **Test the AI:**
+   - Open the chatbot (🤖 button in bottom right)
+   - Try FPA commands AND general questions
+   - The assistant will intelligently route commands vs. conversations
+
+**Note:** Google Gemini offers a generous free tier. Your API key is stored locally and never shared.
+
+### Voice Controls
+The voice input button (🎤) is located in the header toolbar:
+- Click it to activate voice input
+- Speak your search query or command
+- Works for search, forms, and chatbot
+
 ## Android & Mobile Access
 
 ### On Desktop:

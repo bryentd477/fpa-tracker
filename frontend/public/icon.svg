@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Transparent background - no fill -->
+  
+  <!-- Tree trunk -->
+  <rect x="236" y="280" width="40" height="100" fill="#5A3A2A" rx="4"/>
+  
+  <!-- Tree foliage - layered triangles for depth -->
+  <path d="M 256 100 L 160 220 L 352 220 Z" fill="#6FA050" opacity="0.95"/>
+  <path d="M 256 140 L 190 260 L 322 260 Z" fill="#7FB060" opacity="0.95"/>
+  <path d="M 256 180 L 220 300 L 292 300 Z" fill="#8FC570" opacity="0.95"/>
+  
+  <!-- Highlight accents on tree -->
+  <path d="M 256 110 L 235 145 L 277 145 Z" fill="#9FD580" opacity="0.8"/>
+  <path d="M 256 155 L 240 185 L 272 185 Z" fill="#AFE590" opacity="0.7"/>
+  <path d="M 256 200 L 245 225 L 267 225 Z" fill="#C0F5A0" opacity="0.6"/>
+</svg>

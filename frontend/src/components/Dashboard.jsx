@@ -1,4 +1,6 @@
 import React from 'react';
+import ApprovedFPAsTable from './ApprovedFPAsTable';
+import ExpiringFPAsAlert from './ExpiringFPAsAlert';
 
 function Dashboard({ fpas, onSelectFPA }) {
   const statusGroups = {
@@ -29,9 +31,9 @@ function Dashboard({ fpas, onSelectFPA }) {
 
   return (
     <div className="dashboard">
-      <h2 className="view-title">Dashboard</h2>
-
-      <div className="status-grid">
+      <div className="status-section">
+        <h3>All FPAs by Status</h3>
+        <div className="status-grid">
         {Object.entries(grouped).map(([status, items]) => (
           <div key={status} className="status-card">
             <div className="status-header" style={{ borderLeftColor: getStatusColor(status) }}>
@@ -58,6 +60,11 @@ function Dashboard({ fpas, onSelectFPA }) {
           </div>
         ))}
       </div>
+      </div>
+
+      <ExpiringFPAsAlert fpas={fpas} onSelectFPA={onSelectFPA} />
+
+      <ApprovedFPAsTable fpas={fpas} onSelectFPA={onSelectFPA} />
     </div>
   );
 }

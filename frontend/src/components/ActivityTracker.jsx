@@ -29,7 +29,9 @@ function ActivityTracker({ activity, fpaId, onUpdate }) {
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString();
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '-';
+    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
   };
 
   if (!isEditing && activity) {

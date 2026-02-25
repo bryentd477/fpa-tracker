@@ -1,0 +1,173 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(resourceData) {
+      return resourceData.ownerId == request.auth.uid ||
+        (!resourceData.keys().hasAny(['ownerId']) && resourceData.userId == request.auth.uid);
+    }
+
+    function isOwnerCreate() {
+      return request.resource.data.ownerId == request.auth.uid &&
+        (!request.resource.data.keys().hasAny(['userId']) || request.resource.data.userId == request.auth.uid);
+    }
+
+    function ownerUnchanged() {
+      return request.resource.data.ownerId == resource.data.ownerId;
+    }
+
+    function isDateLike(value) {
+      return value is string || value is timestamp;
+    }
+
+    function isValidActivity(activity) {
+      return activity is map && activity.keys().hasOnly([
+        'status',
+        'startDate',
+        'harvestCompleteDate',
+        'activityCompleteDate',
+        'comments',
+        'reforestationRequired'
+      ]) &&
+      (activity.status is string) &&
+      (!('startDate' in activity) || isDateLike(activity.startDate)) &&
+      (!('harvestCompleteDate' in activity) || isDateLike(activity.harvestCompleteDate)) &&
+      (!('activityCompleteDate' in activity) || isDateLike(activity.activityCompleteDate)) &&
+      (!('comments' in activity) || activity.comments is string) &&
+      (!('reforestationRequired' in activity) || activity.reforestationRequired is bool);
+    }
+
+    function isValidFpa(data) {
+      return data.keys().hasOnly([
+        'ownerId',
+        'userId',
+        'fpaNumber',
+        'landowner',
+        'timberSaleName',
+        'landownerType',
+        'applicationStatus',
+        'decisionDeadline',
+        'expirationDate',
+        'approvedActivity',
+        'notes',
+        'activity',
+        'activityHistory',
+        'changeHistory',
+        'geometry',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      (!('fpaNumber' in data) || data.fpaNumber is string) &&
+      (!('landowner' in data) || data.landowner is string) &&
+      (!('timberSaleName' in data) || data.timberSaleName is string) &&
+      (!('landownerType' in data) || data.landownerType is string) &&
+      (!('applicationStatus' in data) || data.applicationStatus is string) &&
+      (!('decisionDeadline' in data) || isDateLike(data.decisionDeadline)) &&
+      (!('expirationDate' in data) || isDateLike(data.expirationDate)) &&
+      (!('approvedActivity' in data) || data.approvedActivity is string) &&
+      (!('notes' in data) || data.notes is string) &&
+      (!('activity' in data) || isValidActivity(data.activity)) &&
+      (!('activityHistory' in data) || data.activityHistory is list) &&
+      (!('changeHistory' in data) || data.changeHistory is list) &&
+      (!('geometry' in data) || data.geometry is string) &&
+      (!('createdAt' in data) || data.createdAt is timestamp) &&
+      (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidApprovedActivity(data) {
+      return data.keys().hasOnly([
+        'ownerId',
+        'userId',
+        'fpaId',
+        'status',
+        'startDate',
+        'harvestCompleteDate',
+        'activityCompleteDate',
+        'comments',
+        'reforestationRequired',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.fpaId is string &&
+      (data.status is string) &&
+      (!('startDate' in data) || isDateLike(data.startDate)) &&
+      (!('harvestCompleteDate' in data) || isDateLike(data.harvestCompleteDate)) &&
+      (!('activityCompleteDate' in data) || isDateLike(data.activityCompleteDate)) &&
+      (!('comments' in data) || data.comments is string) &&
+      (!('reforestationRequired' in data) || data.reforestationRequired is bool) &&
+      (!('createdAt' in data) || data.createdAt is timestamp) &&
+      (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidRenewal(data) {
+      return data.keys().hasOnly([
+        'ownerId',
+        'userId',
+        'fpaId',
+        'renewalDate',
+        'notes',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.fpaId is string &&
+      (data.renewalDate is string || data.renewalDate is timestamp) &&
+      (!('notes' in data) || data.notes is string) &&
+      (!('createdAt' in data) || data.createdAt is timestamp) &&
+      (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    match /fpas/{fpaId} {
+      allow read: if isSignedIn() && isOwner(resource.data);
+      allow create: if isSignedIn() && isOwnerCreate() && isValidFpa(request.resource.data);
+      allow update: if isSignedIn() && isOwner(resource.data) && ownerUnchanged() && isValidFpa(request.resource.data);
+      allow delete: if isSignedIn() && isOwner(resource.data);
+    }
+
+    match /approved_activities/{activityId} {
+      allow read: if isSignedIn() && isOwner(resource.data);
+      allow create: if isSignedIn() && isOwnerCreate() && isValidApprovedActivity(request.resource.data);
+      allow update: if isSignedIn() && isOwner(resource.data) && ownerUnchanged() && isValidApprovedActivity(request.resource.data);
+      allow delete: if isSignedIn() && isOwner(resource.data);
+    }
+
+    match /renewal_history/{renewalId} {
+      allow read: if isSignedIn() && isOwner(resource.data);
+      allow create: if isSignedIn() && isOwnerCreate() && isValidRenewal(request.resource.data);
+      allow update: if isSignedIn() && isOwner(resource.data) && ownerUnchanged() && isValidRenewal(request.resource.data);
+      allow delete: if isSignedIn() && isOwner(resource.data);
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        request.auth.token.email in [
+          'bryent.daugherty@gmail.com'
+        ];
+    }
+
+    match /user_access/{uid} {
+      // Users can read their own access record
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      
+      // Admins can read all user access records
+      allow list: if isAdmin();
+      
+      // New users can create their own access record (during signup)
+      allow create: if isSignedIn() && request.auth.uid == uid && 
+        request.resource.data.status == 'pending' &&
+        request.resource.data.keys().hasOnly(['uid', 'email', 'username', 'status', 'role', 'requestedAt']);
+      
+      // Admins can update any user access (approval)
+      allow update: if isAdmin() && request.resource.data.keys().hasOnly(['uid', 'email', 'username', 'status', 'role', 'requestedAt', 'approvedAt']);
+      
+      // Admins can delete any user access (denial/removal)
+      allow delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

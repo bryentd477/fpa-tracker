@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 
-function FPAList({ fpas, onSelectFPA }) {
+function FPAList({ fpas, onSelectFPA, activeFilter, onClearFilter }) {
   const [sortBy, setSortBy] = useState('createdAt');
+
+  const filterLabel = activeFilter?.label || null;
 
   const sortedFpas = [...fpas].sort((a, b) => {
     if (sortBy === 'fpaNumber') {
@@ -44,6 +46,15 @@ function FPAList({ fpas, onSelectFPA }) {
           <option value="status">Sort by: Status</option>
         </select>
       </div>
+
+      {filterLabel && (
+        <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+            Filter: <strong>{filterLabel}</strong>
+          </span>
+          <button className="btn-secondary" onClick={onClearFilter}>Clear Filter</button>
+        </div>
+      )}
 
       {fpas.length === 0 ? (
         <div className="empty-state">

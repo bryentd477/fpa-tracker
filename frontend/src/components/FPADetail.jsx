@@ -3,6 +3,32 @@ import FPAForm from './FPAForm';
 import ActivityTracker from './ActivityTracker';
 import RenewalHistory from './RenewalHistory';
 
+const TRACKED_FPA_FIELDS = new Set([
+  'fpaNumber',
+  'landowner',
+  'timberSaleName',
+  'landownerType',
+  'applicationStatus',
+  'decisionDeadline',
+  'expirationDate',
+  'approvedActivity',
+  'notes',
+  'geometry'
+]);
+
+const FIELD_LABELS = {
+  fpaNumber: 'FPA Number',
+  landowner: 'Landowner',
+  timberSaleName: 'Timber Sale Name',
+  landownerType: 'Landowner Type',
+  applicationStatus: 'Application Status',
+  decisionDeadline: 'Decision Deadline',
+  expirationDate: 'Expiration Date',
+  approvedActivity: 'Approved Activity',
+  notes: 'Notes',
+  geometry: 'Spatial Data'
+};
+
 function FPADetail({
   fpa,
   onUpdate,
@@ -14,6 +40,9 @@ function FPADetail({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [showRenewalInput, setShowRenewalInput] = useState(false);
+  const [renewalDate, setRenewalDate] = useState('');
+  const [renewalNotes, setRenewalNotes] = useState('');
 
   const handleUpdate = (formData) => {
     onUpdate(fpa.id, formData);
@@ -34,7 +63,62 @@ function FPADetail({
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString();
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '-';
+    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+  };
+
+  const formatDateTime = (dateValue) => {
+    if (!dateValue) return '-';
+    const parsed = dateValue?.toDate?.() ? dateValue.toDate() : new Date(dateValue);
+    if (Number.isNaN(parsed.getTime())) return '-';
+    return `${parsed.getMonth() + 1}/${parsed.getDate()}/${parsed.getFullYear()} ${parsed.getHours()}:${parsed.getMinutes().toString().padStart(2, '0')}:${parsed.getSeconds().toString().padStart(2, '0')}`;
+  };
+
+  const activityHistory = Array.isArray(fpa.activityHistory) ? fpa.activityHistory : [];
+  const changeHistory = Array.isArray(fpa.changeHistory) ? fpa.changeHistory : [];
+  const formatHistoryValue = (field, value) => {
+    if (value === null || value === undefined || value === '') return '(blank)';
+
+    if (field === 'decisionDeadline' || field === 'expirationDate') {
+      const parsed = new Date(value);
+      if (!Number.isNaN(parsed.getTime())) {
+        return `${parsed.getMonth() + 1}/${parsed.getDate()}/${parsed.getFullYear()}`;
+      }
+    }
+
+    if (typeof value === 'object') {
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return String(value);
+      }
+    }
+    return String(value);
+  };
+
+  const visibleChangeHistory = changeHistory
+    .map((entry) => {
+      const filteredChanges = Array.isArray(entry?.changes)
+        ? entry.changes.filter((change) => TRACKED_FPA_FIELDS.has(change?.field))
+        : [];
+      return {
+        ...entry,
+        changes: filteredChanges
+      };
+    })
+    .filter((entry) => entry.changes.length > 0);
+
+  const handleRenewalSave = async () => {
+    if (!renewalDate) {
+      alert('Please select a renewal date');
+      return;
+    }
+    await onAddRenewal(fpa.id, { renewalDate, notes: renewalNotes });
+    await onUpdate(fpa.id, { expirationDate: renewalDate });
+    setRenewalDate('');
+    setRenewalNotes('');
+    setShowRenewalInput(false);
   };
 
   return (
@@ -58,7 +142,7 @@ function FPADetail({
         </div>
       </div>
 
-      {isEditing && !isEditing && (
+      {isEditing && (
         <div className="edit-form-container">
           <FPAForm initialData={fpa} onSubmit={handleUpdate} />
           <button className="btn btn-secondary" onClick={() => setIsEditing(false)}>
@@ -84,14 +168,14 @@ function FPADetail({
                 >
                   Activity
                 </button>
-                <button
-                  className={`tab-btn ${activeTab === 'renewals' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('renewals')}
-                >
-                  Renewals
-                </button>
               </>
             )}
+            <button
+              className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
+              onClick={() => setActiveTab('history')}
+            >
+              History
+            </button>
           </div>
 
           <div className="tab-content">
@@ -135,24 +219,48 @@ function FPADetail({
                   )}
 
                   {fpa.applicationStatus === 'Approved' && (
-                    <div className="detail-row">
-                      <label>Expiration Date</label>
-                      <strong>{formatDate(fpa.expirationDate)}</strong>
-                    </div>
+                    <>
+                      <div className="detail-section-header">
+                        <h3>Expiration Data</h3>
+                        <button
+                          className="btn-secondary"
+                          onClick={() => setShowRenewalInput((prev) => !prev)}
+                        >
+                          {showRenewalInput ? 'Cancel' : 'Renewal'}
+                        </button>
+                      </div>
+                      <div className="detail-row">
+                        <label>Expiration Date</label>
+                        <strong>{formatDate(fpa.expirationDate)}</strong>
+                      </div>
+                      {showRenewalInput && (
+                        <div className="renewal-inline">
+                          <input
+                            type="date"
+                            value={renewalDate}
+                            onChange={(event) => setRenewalDate(event.target.value)}
+                          />
+                          <textarea
+                            rows="2"
+                            placeholder="Notes (optional)"
+                            value={renewalNotes}
+                            onChange={(event) => setRenewalNotes(event.target.value)}
+                          />
+                          <button className="btn btn-primary" type="button" onClick={handleRenewalSave}>
+                            Save
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
-                <div className="detail-section">
-                  <h3>Metadata</h3>
-                  <div className="detail-row">
-                    <label>Created</label>
-                    <span>{formatDate(fpa.createdAt)}</span>
+                {fpa.notes && (
+                  <div className="detail-section">
+                    <h3>Notes</h3>
+                    <div className="detail-notes">{fpa.notes}</div>
                   </div>
-                  <div className="detail-row">
-                    <label>Last Updated</label>
-                    <span>{formatDate(fpa.updatedAt)}</span>
-                  </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -164,13 +272,65 @@ function FPADetail({
               />
             )}
 
-            {activeTab === 'renewals' && (
-              <RenewalHistory
-                renewals={fpa.renewals || []}
-                fpaId={fpa.id}
-                onAdd={onAddRenewal}
-                onDelete={onDeleteRenewal}
-              />
+            {activeTab === 'history' && (
+              <div className="history-tab">
+                <div className="detail-section">
+                  <h3>FPA Change History</h3>
+                  {visibleChangeHistory.length ? (
+                    <div className="history-list">
+                      {[...visibleChangeHistory].reverse().map((entry, index) => (
+                        <div key={`${entry.timestamp || 'change'}-${index}`} className="history-item">
+                          <div className="history-row">
+                            <strong>{entry.action === 'created' ? 'Initial Entry' : 'Updated'}</strong>
+                            <span className="history-date">{formatDateTime(entry.timestamp)}</span>
+                          </div>
+                          {Array.isArray(entry.changes) && entry.changes.map((change, changeIndex) => (
+                            <div key={`${change.field || 'field'}-${changeIndex}`} className="history-line">
+                              {FIELD_LABELS[change.field] || change.field}: {formatHistoryValue(change.field, change.from)} → {formatHistoryValue(change.field, change.to)}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty-state">
+                      <p>No FPA field history recorded yet</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="detail-section">
+                  <h3>Activity History</h3>
+                  {activityHistory.length ? (
+                    <div className="history-list">
+                      {activityHistory.map((entry, index) => (
+                        <div key={`${entry.archivedAt || 'activity'}-${index}`} className="history-item">
+                          <div className="history-row">
+                            <strong>{entry.status || 'Unknown'}</strong>
+                            <span className="history-date">{formatDate(entry.archivedAt)}</span>
+                          </div>
+                          {entry.startDate && <div className="history-line">Start: {formatDate(entry.startDate)}</div>}
+                          {entry.harvestCompleteDate && <div className="history-line">Harvest Complete: {formatDate(entry.harvestCompleteDate)}</div>}
+                          {entry.activityCompleteDate && <div className="history-line">Activity Complete: {formatDate(entry.activityCompleteDate)}</div>}
+                          {entry.comments && <div className="history-line">Notes: {entry.comments}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty-state">
+                      <p>No activity history yet</p>
+                    </div>
+                  )}
+                </div>
+
+                <RenewalHistory
+                  renewals={fpa.renewals || []}
+                  fpaId={fpa.id}
+                  onAdd={onAddRenewal}
+                  onDelete={onDeleteRenewal}
+                  showAdd={false}
+                />
+              </div>
             )}
           </div>
 
