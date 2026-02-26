@@ -6,7 +6,6 @@
     "source": "functions"
   },
   "hosting": {
-    "site": "fpa-tracker",
     "public": "frontend/build",
     "ignore": [
       "firebase.json",

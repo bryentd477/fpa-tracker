@@ -344,14 +344,6 @@ function FPADetail({
         </>
       )}
 
-      {isEditing && (
-        <>
-          <FPAForm initialData={fpa} onSubmit={handleUpdate} />
-          <button className="btn btn-secondary" onClick={() => setIsEditing(false)}>
-            Cancel
-          </button>
-        </>
-      )}
     </div>
   );
 }

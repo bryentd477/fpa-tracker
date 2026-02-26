@@ -36,8 +36,8 @@ function MapViewer({ fpas = [] }) {
       {/* Tab Controls */}
       <div style={{
         display: 'flex',
-        gap: '8px',
-        padding: isMobile ? '8px' : '12px',
+        gap: isMobile ? '4px' : '8px',
+        padding: isMobile ? '4px 6px' : '12px',
         background: 'var(--bg-secondary)',
         borderRadius: '6px',
         border: '1px solid var(--border-color)',
@@ -67,15 +67,16 @@ function MapViewer({ fpas = [] }) {
         <button
           onClick={() => setActiveTab('dnr')}
           style={{
-            padding: isMobile ? '6px 12px' : '8px 16px',
+            padding: isMobile ? '4px 8px' : '8px 16px',
             background: activeTab === 'dnr' ? 'var(--accent-color)' : 'rgba(111, 160, 80, 0.2)',
             border: 'none',
             borderRadius: '4px',
             color: activeTab === 'dnr' ? 'white' : 'var(--text-primary)',
             cursor: 'pointer',
-            fontSize: isMobile ? '12px' : '13px',
+            fontSize: isMobile ? '11px' : '13px',
             fontWeight: activeTab === 'dnr' ? '600' : '500',
-            transition: 'all 0.2s'
+            transition: 'all 0.2s',
+            whiteSpace: 'nowrap'
           }}
           title="View Washington DNR map in full screen"
         >
@@ -84,15 +85,16 @@ function MapViewer({ fpas = [] }) {
         <button
           onClick={() => setActiveTab('overlay')}
           style={{
-            padding: isMobile ? '6px 12px' : '8px 16px',
+            padding: isMobile ? '4px 8px' : '8px 16px',
             background: activeTab === 'overlay' ? 'var(--accent-color)' : 'rgba(111, 160, 80, 0.2)',
             border: 'none',
             borderRadius: '4px',
             color: activeTab === 'overlay' ? 'white' : 'var(--text-primary)',
             cursor: 'pointer',
-            fontSize: isMobile ? '12px' : '13px',
+            fontSize: isMobile ? '11px' : '13px',
             fontWeight: activeTab === 'overlay' ? '600' : '500',
-            transition: 'all 0.2s'
+            transition: 'all 0.2s',
+            whiteSpace: 'nowrap'
           }}
           title="View your FPAs with status colors"
         >
@@ -178,17 +180,17 @@ function MapViewer({ fpas = [] }) {
           borderRadius: '8px',
           overflow: isMobile ? 'auto' : 'hidden',
           border: '1px solid var(--border-color)',
-          background: '#f0f0f0',
-          minHeight: isMobile ? '80vh' : 0,
-          height: isMobile ? 'auto' : 'auto',
+          minHeight: isMobile ? '50vh' : '600px',
+          display: 'flex',
+          flexDirection: 'column',
           position: 'relative'
         }}>
           <iframe
             src={dfrMapUrl}
             style={{
               width: '100%',
-              height: isMobile ? '150vh' : '100%',
-              minHeight: isMobile ? '1200px' : '600px',
+              height: '100%',
+              flex: 1,
               border: 'none'
             }}
             title="WADNR Forest Products Activity Map"
@@ -203,8 +205,10 @@ function MapViewer({ fpas = [] }) {
           borderRadius: '8px',
           overflow: 'hidden',
           border: '1px solid var(--border-color)',
-          minHeight: isMobile ? '70vh' : 0,
-          height: isMobile ? '70vh' : 'auto'
+          minHeight: '400px',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column'
         }}>
           <FPAOverlayMap fpas={fpas} />
         </div>

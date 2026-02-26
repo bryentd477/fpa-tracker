@@ -1761,13 +1761,25 @@ canvas:not([data-assistant]) {
 }
 
 /* ===== FPA FORM ===== */
+.fpa-form-container {
+  padding: 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .fpa-form {
   background-color: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 24px;
-  max-width: 600px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .fpa-form {
+    max-width: 600px;
+  }
 }
 
 .fpa-form h2 {

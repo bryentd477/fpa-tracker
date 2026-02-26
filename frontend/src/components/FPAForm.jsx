@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import MapEditor from './MapEditor';
-import { searchArcGISByFPID } from '../utils/arcgisAPI';
+import { searchArcGISByFPID, AVAILABLE_REGIONS, getRegionJurisdictions } from '../utils/arcgisAPI';
 
 const DEFAULT_FORM_DATA = {
   fpaNumber: '',
+  region: 'NORTHWEST',
+  fpJurisdiction: '',
   landowner: '',
   timberSaleName: '',
   landownerType: '',
@@ -48,6 +50,20 @@ function FPAForm({
     setHasUserEdits(false);
   }, [draftKey, draftData, initialData]);
 
+  // Update jurisdictions when region changes (using hardcoded mapping)
+  useEffect(() => {
+    if (!formData.region) {
+      return;
+    }
+
+    const jurisdictions = getRegionJurisdictions(formData.region);
+    
+    // Clear jurisdiction if it's not in the new list
+    if (formData.fpJurisdiction && !jurisdictions.includes(formData.fpJurisdiction)) {
+      setFormData(prev => ({ ...prev, fpJurisdiction: '' }));
+    }
+  }, [formData.region]);
+
   // Update form when initialData changes (from chatbot)
   useEffect(() => {
     if (initialData && !hasUserEdits && !draftData) {
@@ -63,9 +79,9 @@ function FPAForm({
   }, [initialData, hasUserEdits, draftData]);
 
   useEffect(() => {
-    if (!onDraftChange || !draftKey) return;
+    if (!onDraftChange || !draftKey || !hasUserEdits) return;
     onDraftChange(formData);
-  }, [formData, draftKey]); // Remove onDraftChange from dependencies - it causes infinite loops
+  }, [formData, draftKey, hasUserEdits]); // Remove onDraftChange from dependencies - it causes infinite loops
 
   useEffect(() => {
     if (!onClearHighlightField || !highlightFields.length) return;
@@ -78,6 +94,18 @@ function FPAForm({
       }
     });
   }, [formData, highlightFields]); // Remove onClearHighlightField from dependencies
+
+  // Detect mobile viewport
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -157,7 +185,14 @@ function FPAForm({
     <div className="fpa-form-container">
       <h2 className="view-title">FPA Data</h2>
 
-      <form onSubmit={handleSubmit} className="fpa-form">
+      <form onSubmit={handleSubmit} className="fpa-form" style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 420px',
+        gap: isMobile ? '0' : '24px',
+        alignItems: 'start'
+      }}>
+        {/* Left column: form sections */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <div className="form-section">
           <h3>Basic Information</h3>
 
@@ -173,6 +208,43 @@ function FPAForm({
               disabled={!!initialData}
               required
             />
+          </div>
+
+          <div className={`form-group ${isHighlighted('region') ? 'field-missing' : ''}`}>
+            <label htmlFor="region">Region</label>
+            <select
+              id="region"
+              name="region"
+              value={formData.region}
+              onChange={handleChange}
+              disabled
+            >
+              {AVAILABLE_REGIONS.map(region => (
+                <option key={region} value={region}>
+                  {region.replace(/_/g, ' ')}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={`form-group ${isHighlighted('fpJurisdiction') ? 'field-missing' : ''}`}>
+            <label htmlFor="fpJurisdiction">FP Jurisdiction</label>
+            <select
+              id="fpJurisdiction"
+              name="fpJurisdiction"
+              value={formData.fpJurisdiction}
+              onChange={handleChange}
+              disabled={!formData.region}
+            >
+              <option value="">
+                {!formData.region ? 'Select region first' : 'Select...'}
+              </option>
+              {getRegionJurisdictions(formData.region).map(jurisdiction => (
+                <option key={jurisdiction} value={jurisdiction}>
+                  {jurisdiction}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className={`form-group ${isHighlighted('landowner') ? 'field-missing' : ''}`}>
@@ -305,6 +377,8 @@ function FPAForm({
           </div>
         </div>
 
+        {/* Mobile: Spatial Data section (shown on mobile only) */}
+        {isMobile && (
         <div className="form-section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '10px' }}>
             <h3 style={{ margin: 0 }}>Spatial Data</h3>
@@ -403,7 +477,7 @@ function FPAForm({
               Visit the DNR Forest Practices Application Tracking System to search for FPA numbers by location or other criteria.
             </div>
             <a
-              href="https://fpamt.dnr.wa.gov/default.aspx"
+              href="https://experience.arcgis.com/experience/80f5bac425b64cb6a97096d5ef2e6bd0/page/Page"
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -452,8 +526,169 @@ function FPAForm({
             </div>
           )}
         </div>
+        )}
+        </div>
+        {!isMobile && (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: 'calc(100vh - 200px)',
+          overflowY: 'auto',
+          paddingRight: '12px'
+        }}>
+        <div className="form-section">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '10px' }}>
+            <h3 style={{ margin: 0 }}>Spatial Data</h3>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={handleLoadGeometryFromDNR}
+                disabled={loadingGeometry || !formData.fpaNumber.trim()}
+                style={{
+                  padding: '6px 12px',
+                  background: formData.geometry ? '#10b981' : 'var(--accent-color)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  cursor: loadingGeometry || !formData.fpaNumber.trim() ? 'not-allowed' : 'pointer',
+                  fontWeight: '500',
+                  opacity: loadingGeometry || !formData.fpaNumber.trim() ? '0.6' : '1'
+                }}
+                onMouseOver={(e) => !loadingGeometry && !formData.fpaNumber.trim() || (e.currentTarget.style.opacity = '0.85')}
+                onMouseOut={(e) => !loadingGeometry && !formData.fpaNumber.trim() || (e.currentTarget.style.opacity = '1')}
+              >
+                {loadingGeometry ? '⏳ Loading...' : formData.geometry ? '✓ DNR Geometry Loaded' : '📍 Load from DNR Map'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowMapEditor(!showMapEditor)}
+                style={{
+                  padding: '6px 12px',
+                  background: 'var(--accent-color)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.opacity = '0.85'}
+                onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+              >
+                {showMapEditor ? '✓ Hide Map Editor' : '✏️ Edit Areas'}
+              </button>
+            </div>
+          </div>
 
-        <div className="form-actions">
+          {geometryError && (
+            <div style={{
+              padding: '8px 12px',
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '4px',
+              color: '#ef4444',
+              fontSize: '12px',
+              marginBottom: '12px'
+            }}>
+              <div style={{ fontWeight: '600', marginBottom: '4px' }}>⚠️ {geometryError}</div>
+              {geometryError.includes('Sample valid FP_IDs') && (
+                <div style={{ fontSize: '11px', marginTop: '4px', opacity: 0.9 }}>
+                  💡 Tip: Use the DNR FPA Search link below to find the correct FPA number format.
+                </div>
+              )}
+            </div>
+          )}
+
+          {formData.geometry && (
+            <div style={{
+              padding: '8px 12px',
+              background: 'rgba(16, 185, 129, 0.15)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: '4px',
+              color: '#10b981',
+              fontSize: '12px',
+              marginBottom: '12px'
+            }}>
+              ✓ {formData.geometry.features?.length || 0} polygon(s) loaded
+            </div>
+          )}
+
+          {/* DNR Reference Link */}
+          <div style={{
+            marginBottom: '16px',
+            padding: '12px',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            background: 'var(--input-bg)'
+          }}>
+            <div style={{
+              fontSize: '12px',
+              fontWeight: '500',
+              color: 'var(--text-secondary)',
+              marginBottom: '8px'
+            }}>
+              📍 Need to find an FPA number?
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              Visit the DNR Forest Practices Application Tracking System to search for FPA numbers by location or other criteria.
+            </div>
+            <a
+              href="https://experience.arcgis.com/experience/80f5bac425b64cb6a97096d5ef2e6bd0/page/Page"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-block',
+                padding: '6px 12px',
+                background: 'var(--accent-color)',
+                color: 'white',
+                textDecoration: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: '500'
+              }}
+            >
+              Open DNR FPA Search →
+            </a>
+          </div>
+
+          {showMapEditor && (
+            <div style={{
+              flex: 1,
+              height: '450px',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              border: '1px solid var(--border-color)',
+              marginBottom: '16px'
+            }}>
+              <MapEditor
+                geometry={formData.geometry}
+                onGeometryChange={(geom) => setFormData(prev => ({ ...prev, geometry: geom }))}
+                applicationStatus={formData.applicationStatus}
+              />
+            </div>
+          )}
+
+          {formData.geometry && (
+            <div style={{
+              padding: '12px',
+              background: 'rgba(16, 185, 129, 0.1)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: '#10b981',
+              marginBottom: '16px'
+            }}>
+              ✓ {formData.geometry.features.length} area{formData.geometry.features.length !== 1 ? 's' : ''} defined
+            </div>
+          )}
+        </div>
+        </div>
+        )}
+
+        <div className="form-actions" style={{
+          gridColumn: isMobile ? 'auto' : '1 / -1'
+        }}>
           <button type="submit" className="btn btn-primary">
             {initialData ? 'Update FPA' : 'Create FPA'}
           </button>

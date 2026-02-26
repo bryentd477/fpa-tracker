@@ -136,6 +136,27 @@ function Calendar({ userId, onEventsUpdate }) {
            today.getDate() === day;
   };
 
+  const handleDayClick = (day) => {
+    if (!day) return;
+    
+    // Format date as YYYY-MM-DD for the date input
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    const dateStr = `${year}-${month}-${dayStr}`;
+    
+    // Pre-fill the date and open the modal
+    setNewEvent({
+      title: '',
+      description: '',
+      date: dateStr,
+      time: '',
+      type: 'meeting'
+    });
+    setSelectedDate(day);
+    setShowAddEvent(true);
+  };
+
   const days = getDaysInMonth();
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                       'July', 'August', 'September', 'October', 'November', 'December'];
@@ -413,11 +434,9 @@ function Calendar({ userId, onEventsUpdate }) {
             return (
               <div
                 key={index}
-                onClick={() => day && setSelectedDate(day)}
                 style={{
                   border: '1px solid var(--border-color)',
                   padding: '6px',
-                  cursor: day ? 'pointer' : 'default',
                   background: today ? 'rgba(111, 160, 80, 0.2)' : 'transparent',
                   position: 'relative',
                   minHeight: '80px'
@@ -425,12 +444,23 @@ function Calendar({ userId, onEventsUpdate }) {
               >
                 {day && (
                   <>
-                    <div style={{
-                      fontSize: '14px',
-                      fontWeight: today ? '700' : '500',
-                      color: today ? 'var(--accent-color)' : 'var(--text-primary)',
-                      marginBottom: '4px'
-                    }}>
+                    <div 
+                      onClick={() => handleDayClick(day)}
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: today ? '700' : '500',
+                        color: today ? 'var(--accent-color)' : 'var(--text-primary)',
+                        marginBottom: '4px',
+                        cursor: 'pointer',
+                        display: 'inline-block',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(111, 160, 80, 0.3)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      title="Click to add event"
+                    >
                       {day}
                     </div>
                     

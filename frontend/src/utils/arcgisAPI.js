@@ -333,7 +333,7 @@ export const getJurisdictionsInRegion = async (region) => {
 
     const jurisdictions = new Set();
     result.features.forEach(f => {
-      const jurisdiction = f.properties?.FP_Jurisdic_NM;
+      const jurisdiction = f.properties?.FP_JURISDICT_NM || f.properties?.FP_Jurisdic_NM;
       if (jurisdiction) {
         jurisdictions.add(jurisdiction);
       }
@@ -344,4 +344,30 @@ export const getJurisdictionsInRegion = async (region) => {
     console.error('Error fetching jurisdictions:', error);
     return [];
   }
+};
+
+/**
+ * Region and Jurisdiction mappings (hardcoded for faster performance)
+ * Add more regions later as needed
+ */
+const REGION_JURISDICTION_MAP = {
+  'NORTHWEST': [
+    'Chuckanut',
+    'Islands',
+    'Nooksack',
+    'Samish',
+    'Skagit',
+    'Skykomish',
+    'Stillaguamish'
+  ]
+};
+
+export const AVAILABLE_REGIONS = Object.keys(REGION_JURISDICTION_MAP);
+
+/**
+ * Get jurisdictions for a region from hardcoded mapping
+ * This is much faster than querying ArcGIS every time
+ */
+export const getRegionJurisdictions = (region) => {
+  return REGION_JURISDICTION_MAP[region] || [];
 };
