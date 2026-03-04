@@ -198,29 +198,13 @@ export const signInWithEmail = async (email, password) => {
     }
     
     if (!userAccess) {
-      console.log('[signInWithEmail] No access record found, creating default approval...');
-      // Auto-create approval for non-admin users (for ease of testing/deployment)
-      try {
-        const username = email?.includes('@') ? email.split('@')[0] : email;
-        await setDoc(doc(db, 'user_access', userCredential.user.uid), {
-          uid: userCredential.user.uid,
-          email: resolvedEmail,
-          username: username,
-          status: 'approved',
-          role: 'user',
-          requestedAt: serverTimestamp(),
-          approvedAt: serverTimestamp()
-        });
-        console.log('[signInWithEmail] ✓ Auto-created approval for user');
-        return userCredential.user;
-      } catch (createErr) {
-        console.error('[signInWithEmail] Failed to auto-create approval:', createErr.message);
-        // Fall through to error handling below
-      }
+      console.error('[signInWithEmail] No access record found for user');
+      await signOut(auth);
+      throw new Error('Your account is not approved yet. Please contact your administrator.');
     }
     
-    if (userAccess && userAccess.status !== 'approved') {
-      console.log('[signInWithEmail] User status is not approved:', userAccess.status);
+    if (userAccess.status !== 'approved') {
+      console.error('[signInWithEmail] User status is not approved:', userAccess.status);
       await signOut(auth);
       throw new Error('Your account has not been approved yet. Please contact the administrator.');
     }

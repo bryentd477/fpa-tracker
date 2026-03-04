@@ -7,6 +7,7 @@ import FPADetail from './components/FPADetail';
 import SearchBar from './components/SearchBar';
 import ReportGenerator from './components/ReportGenerator';
 import UserManagement from './components/UserManagement';
+import AccountSettings from './components/AccountSettings';
 import Login from './components/Login';
 import ChatAssistant from './components/ChatAssistant';
 import MapViewer from './components/MapViewer';
@@ -638,6 +639,14 @@ function App() {
             )}
             <span className="user-email">{userDisplayName || user.email}</span>
             <button 
+              className="btn-secondary"
+              onClick={() => navigateToView('settings')}
+              style={{ fontSize: '12px', padding: '8px 12px' }}
+              title="Account Settings"
+            >
+              ⚙️
+            </button>
+            <button 
               className="btn-logout"
               onClick={handleLogout}
             >
@@ -735,6 +744,12 @@ function App() {
           onClick={() => navigateToView('calendar')}
         >
           📅 Calendar
+        </button>
+        <button
+          className={`nav-btn ${currentView === 'settings' ? 'active' : ''}`}
+          onClick={() => navigateToView('settings')}
+        >
+          ⚙️ Settings
         </button>
         {isAdmin && (
           <button
@@ -918,6 +933,10 @@ function App() {
             userId={user?.uid} 
             onEventsUpdate={setCalendarEvents}
           />
+        )}
+
+        {!loading && currentView === 'settings' && (
+          <AccountSettings user={user} />
         )}
 
         {!loading && currentView === 'users' && isAdmin && (
