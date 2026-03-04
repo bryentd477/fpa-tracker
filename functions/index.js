@@ -320,8 +320,8 @@ const callGemini = async (prompt, temperature = 0.3) => {
   return text.trim();
 };
 
-exports.createFpa = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.createFpa = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const uid = assertAuth(request);
   const { limit, windowMs } = RATE_LIMITS.fpaCreate;
   await checkRateLimit(uid, 'fpaCreate', limit, windowMs);
@@ -351,8 +351,8 @@ exports.createFpa = onCall({ enforceAppCheck: true }, async (request) => {
   return { id: docRef.id };
 });
 
-exports.updateFpa = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.updateFpa = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const uid = assertAuth(request);
   const { limit, windowMs } = RATE_LIMITS.fpaUpdate;
   await checkRateLimit(uid, 'fpaUpdate', limit, windowMs);
@@ -400,8 +400,8 @@ exports.updateFpa = onCall({ enforceAppCheck: true }, async (request) => {
   return { ok: true };
 });
 
-exports.deleteFpa = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.deleteFpa = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const uid = assertAuth(request);
   const { limit, windowMs } = RATE_LIMITS.fpaDelete;
   await checkRateLimit(uid, 'fpaDelete', limit, windowMs);
@@ -421,8 +421,8 @@ exports.deleteFpa = onCall({ enforceAppCheck: true }, async (request) => {
   return { ok: true };
 });
 
-exports.addRenewal = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.addRenewal = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const uid = assertAuth(request);
   const { limit, windowMs } = RATE_LIMITS.renewalWrite;
   await checkRateLimit(uid, 'renewalWrite', limit, windowMs);
@@ -451,8 +451,8 @@ exports.addRenewal = onCall({ enforceAppCheck: true }, async (request) => {
   return { id: docRef.id };
 });
 
-exports.deleteRenewal = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.deleteRenewal = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const uid = assertAuth(request);
   const { limit, windowMs } = RATE_LIMITS.renewalWrite;
   await checkRateLimit(uid, 'renewalWrite', limit, windowMs);
@@ -472,8 +472,8 @@ exports.deleteRenewal = onCall({ enforceAppCheck: true }, async (request) => {
   return { ok: true };
 });
 
-exports.addApprovedActivity = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.addApprovedActivity = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const uid = assertAuth(request);
   const { limit, windowMs } = RATE_LIMITS.activityWrite;
   await checkRateLimit(uid, 'activityWrite', limit, windowMs);
@@ -500,8 +500,8 @@ exports.addApprovedActivity = onCall({ enforceAppCheck: true }, async (request) 
   return { id: docRef.id };
 });
 
-exports.updateApprovedActivity = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.updateApprovedActivity = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const uid = assertAuth(request);
   const { limit, windowMs } = RATE_LIMITS.activityWrite;
   await checkRateLimit(uid, 'activityWrite', limit, windowMs);
@@ -529,8 +529,8 @@ exports.updateApprovedActivity = onCall({ enforceAppCheck: true }, async (reques
   return { ok: true };
 });
 
-exports.deleteApprovedActivity = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.deleteApprovedActivity = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const uid = assertAuth(request);
   const { limit, windowMs } = RATE_LIMITS.activityWrite;
   await checkRateLimit(uid, 'activityWrite', limit, windowMs);
@@ -550,8 +550,8 @@ exports.deleteApprovedActivity = onCall({ enforceAppCheck: true }, async (reques
   return { ok: true };
 });
 
-exports.requestUserAccess = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.requestUserAccess = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const uid = assertAuth(request);
   const { limit, windowMs } = RATE_LIMITS.accessRequest;
   await checkRateLimit(uid, 'accessRequest', limit, windowMs);
@@ -598,8 +598,8 @@ exports.requestUserAccess = onCall({ enforceAppCheck: true }, async (request) =>
   return { status: accessStatus, role: accessRole };
 });
 
-exports.resolveEmail = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.resolveEmail = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const { limit, windowMs } = RATE_LIMITS.accessRequest;
   const identifier = clampString(request.data?.identifier, 200);
   if (!identifier) {
@@ -638,8 +638,8 @@ exports.resolveEmail = onCall({ enforceAppCheck: true }, async (request) => {
   return { email: data.email };
 });
 
-exports.listPendingUsers = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.listPendingUsers = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const uid = assertAuth(request);
   const { limit, windowMs } = RATE_LIMITS.accessAdmin;
   await checkRateLimit(uid, 'accessAdmin', limit, windowMs);
@@ -655,8 +655,8 @@ exports.listPendingUsers = onCall({ enforceAppCheck: true }, async (request) => 
   }));
 });
 
-exports.listApprovedUsers = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.listApprovedUsers = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const uid = assertAuth(request);
   const { limit, windowMs } = RATE_LIMITS.accessAdmin;
   await checkRateLimit(uid, 'accessAdmin', limit, windowMs);
@@ -672,8 +672,8 @@ exports.listApprovedUsers = onCall({ enforceAppCheck: true }, async (request) =>
   }));
 });
 
-exports.approveUser = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.approveUser = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const uid = assertAuth(request);
   const { limit, windowMs } = RATE_LIMITS.accessAdmin;
   await checkRateLimit(uid, 'accessAdmin', limit, windowMs);
@@ -749,8 +749,8 @@ exports.removeUser = onCall({ enforceAppCheck: false }, async (request) => {
   return { ok: true };
 });
 
-exports.syncUserAccess = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.syncUserAccess = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const uid = assertAuth(request);
   const { limit, windowMs } = RATE_LIMITS.accessRequest;
   await checkRateLimit(uid, 'accessSync', limit, windowMs);
@@ -784,8 +784,8 @@ exports.syncUserAccess = onCall({ enforceAppCheck: true }, async (request) => {
   return { migrated: false };
 });
 
-exports.geminiChat = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.geminiChat = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const uid = request.auth?.uid || 'anonymous';
   const { limit, windowMs } = RATE_LIMITS.geminiChat;
   await checkRateLimit(uid, 'geminiChat', limit, windowMs);
@@ -816,8 +816,8 @@ exports.geminiChat = onCall({ enforceAppCheck: true }, async (request) => {
   return { response: aiResponse };
 });
 
-exports.parseFpaCommand = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.parseFpaCommand = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const uid = request.auth?.uid || 'anonymous';
   const { limit, windowMs } = RATE_LIMITS.geminiParse;
   await checkRateLimit(uid, 'geminiParse', limit, windowMs);
@@ -919,8 +919,8 @@ User: ${userMessage}`;
   return parsed;
 });
 
-exports.backfillOwnerIds = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.backfillOwnerIds = onCall({ enforceAppCheck: false }, async (request) => {
+  // assertAppCheck(request); // Disabled - App Check not configured
   const uid = assertAuth(request);
   const { limit, windowMs } = RATE_LIMITS.accessAdmin;
   await checkRateLimit(uid, 'accessAdmin', limit, windowMs);
