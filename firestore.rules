@@ -167,7 +167,10 @@ service cloud.firestore {
         request.resource.data.status == 'pending' &&
         request.resource.data.keys().hasOnly(['uid', 'email', 'username', 'status', 'role', 'requestedAt']);
       
-      // Admins can update any user access (approval)
+      // Users can update their own document (change username)
+      allow update: if isSignedIn() && request.auth.uid == uid;
+      
+      // Admins can also update user access (approval, status changes)
       allow update: if isAdmin() && 
         request.resource.data.status in ['pending', 'approved', 'denied'] &&
         request.resource.data.role in ['user', 'admin', 'super_admin'];
