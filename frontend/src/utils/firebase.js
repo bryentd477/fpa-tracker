@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, limit } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, limit, serverTimestamp } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import {
   getAuth,
   createUserWithEmailAndPassword,
@@ -30,6 +31,9 @@ export const db = getFirestore(app);
 // Initialize Auth
 export const auth = getAuth(app);
 
+// Initialize Functions
+export const functions = getFunctions(app);
+
 const ensureAuthPersistence = async () => {
   try {
     await setPersistence(auth, browserLocalPersistence);
@@ -50,22 +54,25 @@ const resolveEmailFromIdentifier = async (identifier) => {
     return trimmed;
   }
 
-  // Search user_access collection for username
+  // Search user_access collection for username (case-insensitive)
   try {
-    const snapshot = await getDocs(
-      query(
-        collection(db, 'user_access'),
-        where('username', '==', trimmed),
-        limit(1)
-      )
-    );
+    const normalizedUsername = normalizeUsername(trimmed);
+    const snapshot = await getDocs(collection(db, 'user_access'));
     
-    if (snapshot.empty) {
+    // Find matching user by comparing normalized usernames
+    let matchedUser = null;
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.username && normalizeUsername(data.username) === normalizedUsername) {
+        matchedUser = data;
+      }
+    });
+    
+    if (!matchedUser) {
       throw new Error('No user found with that username.');
     }
     
-    const userData = snapshot.docs[0].data();
-    return userData.email;
+    return matchedUser.email;
   } catch (error) {
     throw new Error(error.message || 'Username not found. Please check it or sign up.');
   }
@@ -86,7 +93,7 @@ export const signUpWithEmail = async (email, password, username) => {
 
     try {
       // Admin emails get auto-approved
-      const ADMIN_EMAILS = ['bryent.daugherty@gmail.com'];
+      const ADMIN_EMAILS = ['bryent.daugherty@gmail.com', 'bryent.daugherty@dnr.wa.gov'];
       const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
       
       // Create user_access document
@@ -96,11 +103,11 @@ export const signUpWithEmail = async (email, password, username) => {
         username: username.trim(),
         status: isAdmin ? 'approved' : 'pending',
         role: isAdmin ? 'super_admin' : 'user',
-        requestedAt: new Date()
+        requestedAt: serverTimestamp()
       };
       
       if (isAdmin) {
-        accessData.approvedAt = new Date();
+        accessData.approvedAt = serverTimestamp();
       }
       
       await setDoc(doc(db, 'user_access', userCredential.user.uid), accessData);
@@ -124,19 +131,64 @@ export const signUpWithEmail = async (email, password, username) => {
 export const signInWithEmail = async (email, password) => {
   try {
     await ensureAuthPersistence();
-    const resolvedEmail = await resolveEmailFromIdentifier(email);
-    console.log('[signInWithEmail] Signing in:', resolvedEmail);
-    const userCredential = await signInWithEmailAndPassword(auth, resolvedEmail, password);
+    
+    // First, try direct email signin in case it's an email
+    let userCredential;
+    let resolvedEmail = email?.trim().toLowerCase();
+    
+    if (resolvedEmail?.includes('@')) {
+      // It's an email, sign in directly
+      try {
+        console.log('[signInWithEmail] Attempting direct email signin:', resolvedEmail);
+        userCredential = await signInWithEmailAndPassword(auth, resolvedEmail, password);
+      } catch (err) {
+        throw new Error('Email or password is incorrect.');
+      }
+    } else {
+      // It's a username, need to look it up
+      try {
+        console.log('[signInWithEmail] Looking up username:', resolvedEmail);
+        resolvedEmail = await resolveEmailFromIdentifier(email);
+        console.log('[signInWithEmail] Resolved username to email:', resolvedEmail);
+        userCredential = await signInWithEmailAndPassword(auth, resolvedEmail, password);
+      } catch (err) {
+        throw new Error(err.message || 'Invalid username or password.');
+      }
+    }
+    
+    console.log('[signInWithEmail] Signed in:', resolvedEmail);
     
     // Admin bypass: Allow known admin emails without approval check
-    const ADMIN_EMAILS = ['bryent.daugherty@gmail.com'];
+    const ADMIN_EMAILS = ['bryent.daugherty@gmail.com', 'bryent.daugherty@dnr.wa.gov'];
     if (ADMIN_EMAILS.includes(resolvedEmail.toLowerCase())) {
-      console.log('[signInWithEmail] ✓ Admin user, bypassing approval check');
+      console.log('[signInWithEmail] ✓ Admin user detected');
+      
+      // Ensure user_access document exists for admin
+      try {
+        const docRef = doc(db, 'user_access', userCredential.user.uid);
+        const docSnap = await getDoc(docRef);
+        if (!docSnap.exists()) {
+          console.log('[signInWithEmail] Creating user_access doc for admin...');
+          await setDoc(docRef, {
+            uid: userCredential.user.uid,
+            email: resolvedEmail,
+            username: resolvedEmail.split('@')[0],
+            status: 'approved',
+            role: 'super_admin',
+            requestedAt: serverTimestamp(),
+            approvedAt: serverTimestamp()
+          });
+          console.log('[signInWithEmail] ✓ User_access doc created');
+        }
+      } catch (docErr) {
+        console.warn('[signInWithEmail] Could not ensure user_access doc (may exist):', docErr.message);
+      }
+      
       return userCredential.user;
     }
     
     // Check if user is approved
-    console.log('[signInWithEmail] User authenticated, checking approval status...');
+    console.log('[signInWithEmail] Checking approval status...');
     const userAccess = await getUserAccess(userCredential.user.uid);
     
     if (!userAccess) {
@@ -151,7 +203,7 @@ export const signInWithEmail = async (email, password) => {
       throw new Error('Your account has not been approved yet. Please contact the administrator.');
     }
     
-    console.log('[signInWithEmail] ✓ Approval confirmed, user signed in successfully');
+    console.log('[signInWithEmail] ✓ User signed in successfully');
     return userCredential.user;
   } catch (error) {
     throw new Error(error.message);
@@ -200,7 +252,7 @@ export const getUserAccess = async (userId) => {
     console.log('[getUserAccess] Checking approval for:', user.email, 'uid:', user.uid);
     
     // Admin bypass: Return super_admin role for known admin emails
-    const ADMIN_EMAILS = ['bryent.daugherty@gmail.com'];
+    const ADMIN_EMAILS = ['bryent.daugherty@gmail.com', 'bryent.daugherty@dnr.wa.gov'];
     if (ADMIN_EMAILS.includes(user.email?.toLowerCase())) {
       console.log('[getUserAccess] ✓ Admin user detected, returning super_admin role');
       return {
@@ -238,7 +290,14 @@ export const getAllPendingUsers = async () => {
         where('status', '==', 'pending')
       )
     );
-    return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+    return snapshot.docs.map((docSnap) => {
+      const data = docSnap.data();
+      return {
+        ...data,
+        id: docSnap.id,
+        uid: data.uid || docSnap.id
+      };
+    });
   } catch (error) {
     console.error('Error fetching pending users:', error);
     throw error;
@@ -254,7 +313,14 @@ export const getAllApprovedUsers = async () => {
         where('status', '==', 'approved')
       )
     );
-    return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+    return snapshot.docs.map((docSnap) => {
+      const data = docSnap.data();
+      return {
+        ...data,
+        id: docSnap.id,
+        uid: data.uid || docSnap.id
+      };
+    });
   } catch (error) {
     console.error('Error fetching approved users:', error);
     throw error;
@@ -268,7 +334,7 @@ export const approveUser = async (userId) => {
     await updateDoc(docRef, {
       status: 'approved',
       role: 'user',
-      approvedAt: new Date()
+      approvedAt: serverTimestamp()
     });
   } catch (error) {
     console.error('Error approving user:', error);
@@ -277,9 +343,17 @@ export const approveUser = async (userId) => {
 };
 
 // Deny user access (admin only)
-export const denyUser = async (userId) => {
+export const denyUser = async (userId, accessDocId = userId) => {
   try {
-    const docRef = doc(db, 'user_access', userId);
+    const denyUserCallable = httpsCallable(functions, 'denyUser');
+    await denyUserCallable({ userId, accessDocId });
+    return;
+  } catch (error) {
+    console.warn('Callable denyUser unavailable, falling back to Firestore-only delete:', error?.message || error);
+  }
+
+  try {
+    const docRef = doc(db, 'user_access', accessDocId);
     await deleteDoc(docRef);
   } catch (error) {
     console.error('Error denying user:', error);
@@ -288,9 +362,17 @@ export const denyUser = async (userId) => {
 };
 
 // Remove approved user (admin only)
-export const removeUser = async (userId) => {
+export const removeUser = async (userId, accessDocId = userId) => {
   try {
-    const docRef = doc(db, 'user_access', userId);
+    const removeUserCallable = httpsCallable(functions, 'removeUser');
+    await removeUserCallable({ userId, accessDocId });
+    return;
+  } catch (error) {
+    console.warn('Callable removeUser unavailable, falling back to Firestore-only delete:', error?.message || error);
+  }
+
+  try {
+    const docRef = doc(db, 'user_access', accessDocId);
     await deleteDoc(docRef);
   } catch (error) {
     console.error('Error removing user:', error);

@@ -219,6 +219,22 @@ function App() {
         fpaNumber: formData.fpaNumber
       });
       
+      // Handle notes history - append new notes with timestamp
+      const currentFPA = fpas.find(fpa => fpa.id === id) || selectedFPA;
+      const notesHistory = formData.notesHistory || currentFPA?.notes || '';
+      const newNotes = formData.notes?.trim() || '';
+      
+      if (newNotes) {
+        // If there are new notes, combine with history
+        const timestamp = new Date().toLocaleString();
+        formData.notes = notesHistory ? `${notesHistory}\n[${timestamp}] ${newNotes}` : `[${timestamp}] ${newNotes}`;
+      } else if (notesHistory && !newNotes) {
+        // If editing but no new notes, preserve the history
+        formData.notes = notesHistory;
+      }
+      // Remove the temporary notesHistory field as it's not needed in DB
+      delete formData.notesHistory;
+      
       await updateFPA(id, formData);
       await fetchFPAs();
       if (selectedFPA) {
@@ -617,6 +633,9 @@ function App() {
             </button>
           </div>
           <div className="user-menu">
+            {user && (
+              <Notifications fpas={fpas} calendarEvents={calendarEvents} />
+            )}
             <span className="user-email">{userDisplayName || user.email}</span>
             <button 
               className="btn-logout"

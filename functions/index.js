@@ -695,39 +695,57 @@ exports.approveUser = onCall({ enforceAppCheck: true }, async (request) => {
   return { ok: true };
 });
 
-exports.denyUser = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.denyUser = onCall({ enforceAppCheck: false }, async (request) => {
   const uid = assertAuth(request);
   const { limit, windowMs } = RATE_LIMITS.accessAdmin;
   await checkRateLimit(uid, 'accessAdmin', limit, windowMs);
   await assertAdmin(uid);
 
   const targetUid = ensureString(request.data?.userId, 'userId');
+  const accessDocId = ensureString(request.data?.accessDocId, 'accessDocId') || targetUid;
   if (!targetUid) {
     throw new HttpsError('invalid-argument', 'userId is required.');
   }
 
-  await db.collection('user_access').doc(targetUid).delete();
-  logger.info('User denied', { uid, targetUid });
+  await db.collection('user_access').doc(accessDocId).delete();
 
+  try {
+    await admin.auth().deleteUser(targetUid);
+  } catch (error) {
+    if (error?.code !== 'auth/user-not-found') {
+      logger.error('Failed to delete auth user on deny', { uid, targetUid, error: error?.message || error });
+      throw new HttpsError('internal', 'Failed to delete authentication user.');
+    }
+  }
+
+  logger.info('User denied', { uid, targetUid, accessDocId });
   return { ok: true };
 });
 
-exports.removeUser = onCall({ enforceAppCheck: true }, async (request) => {
-  assertAppCheck(request);
+exports.removeUser = onCall({ enforceAppCheck: false }, async (request) => {
   const uid = assertAuth(request);
   const { limit, windowMs } = RATE_LIMITS.accessAdmin;
   await checkRateLimit(uid, 'accessAdmin', limit, windowMs);
   await assertAdmin(uid);
 
   const targetUid = ensureString(request.data?.userId, 'userId');
+  const accessDocId = ensureString(request.data?.accessDocId, 'accessDocId') || targetUid;
   if (!targetUid) {
     throw new HttpsError('invalid-argument', 'userId is required.');
   }
 
-  await db.collection('user_access').doc(targetUid).delete();
-  logger.info('User removed', { uid, targetUid });
+  await db.collection('user_access').doc(accessDocId).delete();
 
+  try {
+    await admin.auth().deleteUser(targetUid);
+  } catch (error) {
+    if (error?.code !== 'auth/user-not-found') {
+      logger.error('Failed to delete auth user on remove', { uid, targetUid, error: error?.message || error });
+      throw new HttpsError('internal', 'Failed to delete authentication user.');
+    }
+  }
+
+  logger.info('User removed', { uid, targetUid, accessDocId });
   return { ok: true };
 });
 

@@ -33,35 +33,44 @@ function UserManagement() {
     }
   };
 
-  const handleApproveUser = async (userId, email) => {
+  const handleApproveUser = async (accessDocId, uid, email) => {
     try {
-      await approveUser(userId);
-      setPendingUsers(pendingUsers.filter(u => u.uid !== userId));
-      setApprovedUsers([...approvedUsers, { uid: userId, email, status: 'approved', approvedAt: new Date() }]);
+      await approveUser(accessDocId);
+      setPendingUsers(pendingUsers.filter((u) => u.id !== accessDocId));
+      setApprovedUsers([
+        ...approvedUsers,
+        {
+          id: accessDocId,
+          uid: uid || accessDocId,
+          email,
+          status: 'approved',
+          approvedAt: new Date()
+        }
+      ]);
       setError('');
     } catch (err) {
       setError('Failed to approve user: ' + err.message);
     }
   };
 
-  const handleDenyUser = async (userId) => {
+  const handleDenyUser = async (accessDocId, uid) => {
     if (!window.confirm('Are you sure you want to deny this user? They cannot access the app.')) return;
     
     try {
-      await denyUser(userId);
-      setPendingUsers(pendingUsers.filter(u => u.uid !== userId));
+      await denyUser(uid || accessDocId, accessDocId);
+      setPendingUsers(pendingUsers.filter((u) => u.id !== accessDocId));
       setError('');
     } catch (err) {
       setError('Failed to deny user: ' + err.message);
     }
   };
 
-  const handleRemoveUser = async (userId, email) => {
+  const handleRemoveUser = async (accessDocId, uid, email) => {
     if (!window.confirm('Are you sure you want to remove this user? They will lose access.')) return;
     
     try {
-      await removeUser(userId);
-      setApprovedUsers(approvedUsers.filter(u => u.uid !== userId));
+      await removeUser(uid || accessDocId, accessDocId);
+      setApprovedUsers(approvedUsers.filter((u) => u.id !== accessDocId));
       setError('');
     } catch (err) {
       setError('Failed to remove user: ' + err.message);
@@ -121,14 +130,14 @@ function UserManagement() {
                       <div className="user-actions">
                         <button
                           className="btn btn-approve"
-                          onClick={() => handleApproveUser(user.uid, user.email)}
+                          onClick={() => handleApproveUser(user.id, user.uid, user.email)}
                           title="Approve this user"
                         >
                           ✓ Approve
                         </button>
                         <button
                           className="btn btn-deny"
-                          onClick={() => handleDenyUser(user.uid)}
+                          onClick={() => handleDenyUser(user.id, user.uid)}
                           title="Deny access to this user"
                         >
                           ✕ Deny
@@ -161,7 +170,7 @@ function UserManagement() {
                       <div className="user-actions">
                         <button
                           className="btn btn-remove"
-                          onClick={() => handleRemoveUser(user.uid, user.email)}
+                          onClick={() => handleRemoveUser(user.id, user.uid, user.email)}
                           title="Remove user access"
                         >
                           🗑️ Remove

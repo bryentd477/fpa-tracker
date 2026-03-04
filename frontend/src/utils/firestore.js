@@ -9,7 +9,8 @@ import {
   doc,
   getDoc
 } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { auth, db, functions } from './firebase';
+import { httpsCallable } from 'firebase/functions';
 
 const FPA_COLLECTION = 'fpas';
 const ACTIVITIES_COLLECTION = 'approved_activities';
@@ -88,48 +89,55 @@ export const updateFPA = async (fpaId, fpaData) => {
   try {
     const payload = sanitizeFpaPayload(fpaData);
     
-    console.log('[Firestore.updateFPA] Before sanitization:', {
+    console.log('[FPAUpdate] Updating FPA with change tracking:', {
       fpaId,
       hasGeometry: !!fpaData.geometry,
       geometryType: fpaData.geometry?.type
     });
     
-    console.log('[Firestore.updateFPA] After sanitization:', {
-      fpaId,
-      hasGeometry: !!payload.geometry,
-      geometryType: payload.geometry?.type
-    });
-    
-    // SAFETY CHECK: If geometry is not in the update but exists in the database, preserve it
-    if (!payload.geometry) {
-      try {
-        const docRef = doc(db, 'fpas', fpaId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const existingData = docSnap.data();
-          if (existingData.geometry) {
-            console.log('[Firestore.updateFPA] Preserving existing geometry from database');
-            payload.geometry = existingData.geometry;
+    // Use Cloud Function for change tracking
+    try {
+      const updateFpaFunction = httpsCallable(functions, 'updateFpa');
+      const result = await updateFpaFunction({
+        fpaId,
+        fpaData: payload
+      });
+      console.log('[FPAUpdate] Cloud Function update successful:', result);
+      return result;
+    } catch (functionError) {
+      console.warn('[FPAUpdate] Cloud Function failed, falling back to direct update:', functionError.message);
+      
+      // Fallback to direct Firestore update if Cloud Function fails
+      // This preserves geometry if it's not in the update
+      if (!payload.geometry) {
+        try {
+          const docRef = doc(db, 'fpas', fpaId);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const existingData = docSnap.data();
+            if (existingData.geometry) {
+              console.log('[FPAUpdate] Preserving existing geometry from database');
+              payload.geometry = existingData.geometry;
+            }
           }
+        } catch (err) {
+          console.warn('[FPAUpdate] Could not preserve geometry:', err.message);
         }
-      } catch (err) {
-        console.warn('[Firestore.updateFPA] Could not preserve geometry:', err.message);
       }
+      
+      // Convert geometry to JSON string to avoid Firestore nested array error
+      if (payload.geometry && typeof payload.geometry === 'object') {
+        payload.geometry = JSON.stringify(payload.geometry);
+      }
+      
+      const docRef = doc(db, 'fpas', fpaId);
+      await updateDoc(docRef, {
+        ...payload,
+        updatedAt: new Date()
+      });
+      
+      console.log('[FPAUpdate] Direct Firestore update completed');
     }
-    
-    // Convert geometry to JSON string to avoid Firestore nested array error
-    if (payload.geometry && typeof payload.geometry === 'object') {
-      payload.geometry = JSON.stringify(payload.geometry);
-      console.log('[Firestore.updateFPA] Geometry stringified');
-    }
-    
-    const docRef = doc(db, 'fpas', fpaId);
-    await updateDoc(docRef, {
-      ...payload,
-      updatedAt: new Date()
-    });
-    
-    console.log('[Firestore.updateFPA] Update completed for FPA:', fpaId);
   } catch (error) {
     console.error('Error updating FPA:', error);
     throw error;

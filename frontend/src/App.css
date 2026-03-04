@@ -845,6 +845,12 @@ canvas:not([data-assistant]) {
   border-color: rgba(255, 255, 255, 0.5);
 }
 
+/* Notification bell in user menu */
+.user-menu > div:first-child {
+  display: flex;
+  align-items: center;
+}
+
 /* ===== ERROR BANNER ===== */
 .error-banner {
   background-color: #fee2e2;

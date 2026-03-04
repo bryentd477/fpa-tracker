@@ -4,6 +4,7 @@ function Notifications({ fpas, calendarEvents }) {
   const [notifications, setNotifications] = useState([]);
   const [showPanel, setShowPanel] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [buttonRef, setButtonRef] = useState(null);
   const isMobile = windowWidth <= 768;
 
   useEffect(() => {
@@ -15,6 +16,34 @@ function Notifications({ fpas, calendarEvents }) {
   useEffect(() => {
     generateNotifications();
   }, [fpas, calendarEvents]);
+
+  useEffect(() => {
+    if (!showPanel) return;
+
+    const handleClickOutside = (event) => {
+      if (buttonRef && !buttonRef.contains(event.target)) {
+        // Check if click is inside the panel
+        const panel = document.querySelector('[data-notification-panel]');
+        if (panel && !panel.contains(event.target)) {
+          setShowPanel(false);
+        }
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setShowPanel(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showPanel, buttonRef]);
 
   const generateNotifications = () => {
     const today = new Date();
@@ -75,7 +104,7 @@ function Notifications({ fpas, calendarEvents }) {
         id: 'pending-fpas',
         type: 'info',
         title: 'Pending FPAs',
-        message: `${pendingCount} FPA${pendingCount > 1 ? 's' : ''} awaiting review`,
+        message: `${pendingCount} FPA${pendingCount > 1 ? 's' : ''} awaiting review.`,
         priority: 'low'
       });
     }
@@ -116,6 +145,7 @@ function Notifications({ fpas, calendarEvents }) {
     <div style={{ position: 'relative' }}>
       {/* Notification Bell */}
       <button
+        ref={setButtonRef}
         onClick={() => setShowPanel(!showPanel)}
         style={{
           position: 'relative',
@@ -154,7 +184,7 @@ function Notifications({ fpas, calendarEvents }) {
       {/* Notifications Panel */}
       {showPanel && (
         <>
-          {/* Mobile Overlay */}
+          {/* Overlay */}
           {isMobile && (
             <div 
               onClick={() => setShowPanel(false)}
@@ -165,17 +195,18 @@ function Notifications({ fpas, calendarEvents }) {
                 right: 0,
                 bottom: 0,
                 background: 'rgba(0,0,0,0.5)',
-                zIndex: 999
+                zIndex: 9999
               }}
             />
           )}
-          <div style={{
-            position: isMobile ? 'fixed' : 'absolute',
-            top: isMobile ? '50%' : '100%',
+          <div 
+            data-notification-panel
+            style={{
+            position: 'fixed',
+            top: isMobile ? '50%' : (buttonRef ? buttonRef.getBoundingClientRect().bottom + 8 : '60px'),
             left: isMobile ? '50%' : 'auto',
-            right: isMobile ? 'auto' : 0,
+            right: isMobile ? 'auto' : (buttonRef ? `${window.innerWidth - buttonRef.getBoundingClientRect().right}px` : '20px'),
             transform: isMobile ? 'translate(-50%, -50%)' : 'none',
-            marginTop: isMobile ? '0' : '8px',
             width: isMobile ? '90vw' : '350px',
             maxWidth: isMobile ? '400px' : '350px',
             maxHeight: isMobile ? '80vh' : '500px',
@@ -183,7 +214,7 @@ function Notifications({ fpas, calendarEvents }) {
             border: '1px solid var(--border-color)',
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-            zIndex: 1000,
+            zIndex: 10000,
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column'

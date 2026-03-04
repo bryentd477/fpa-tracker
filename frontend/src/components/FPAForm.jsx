@@ -32,21 +32,31 @@ function FPAForm({
   const [showMapEditor, setShowMapEditor] = useState(false);
   const [loadingGeometry, setLoadingGeometry] = useState(false);
   const [geometryError, setGeometryError] = useState('');
+  const [notesHistory, setNotesHistory] = useState('');  // Keep history separate
 
   useEffect(() => {
     if (draftData) {
+      // Draft data: use as-is (might include unsaved notes)
       setFormData(draftData);
+      // Store any existing notes from the current data as history  
+      setNotesHistory(draftData.notesHistory || '');
       setHasUserEdits(true);
       return;
     }
 
     if (initialData) {
-      setFormData({ ...DEFAULT_FORM_DATA, ...initialData });
+      // Initial data (loading existing FPA): separate notes history
+      setNotesHistory(initialData.notes || '');
+      const dataWithoutNotes = { ...DEFAULT_FORM_DATA, ...initialData };
+      dataWithoutNotes.notes = ''; // Clear notes for new input only
+      dataWithoutNotes.notesHistory = initialData.notes; // Store original in separate field for draft
+      setFormData(dataWithoutNotes);
       setHasUserEdits(false);
       return;
     }
 
     setFormData(DEFAULT_FORM_DATA);
+    setNotesHistory('');
     setHasUserEdits(false);
   }, [draftKey, draftData, initialData]);
 
@@ -353,16 +363,43 @@ function FPAForm({
         </div>
 
         <div className="form-section">
-          <h3>Notes</h3>
+          <h3>Notes & History</h3>
+
+          {notesHistory && (
+            <div style={{
+              marginBottom: '16px',
+              padding: '12px',
+              background: 'var(--bg-tertiary)',
+              borderRadius: '4px',
+              borderLeft: '4px solid var(--accent-color)',
+              maxHeight: '200px',
+              overflowY: 'auto'
+            }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-secondary)' }}>
+                📋 Notes History
+              </label>
+              <div style={{
+                fontSize: '13px',
+                lineHeight: '1.6',
+                color: 'var(--text-primary)',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word'
+              }}>
+                {notesHistory}
+              </div>
+            </div>
+          )}
 
           <div className={`form-group ${isHighlighted('notes') ? 'field-missing' : ''}`}>
-            <label htmlFor="notes">Notes / Comments</label>
+            <label htmlFor="notes">
+              {notesHistory ? 'Add New Note' : 'Add Notes / Comments'}
+            </label>
             <textarea
               id="notes"
               name="notes"
               value={formData.notes}
               onChange={handleChange}
-              placeholder="Add any notes or comments"
+              placeholder={notesHistory ? 'Type your new note here (will be appended to history with timestamp)' : 'Add any notes or comments'}
               rows="4"
               style={{ 
                 width: '100%', 
@@ -374,6 +411,11 @@ function FPAForm({
                 fontFamily: 'inherit'
               }}
             />
+            {notesHistory && (
+              <small style={{ display: 'block', marginTop: '6px', color: 'var(--text-secondary)' }}>
+                ℹ️ Your new note will be appended to the history with a timestamp when saved.
+              </small>
+            )}
           </div>
         </div>
 

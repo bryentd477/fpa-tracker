@@ -140,10 +140,18 @@ service cloud.firestore {
       allow delete: if isSignedIn() && isOwner(resource.data);
     }
 
+    match /calendar_events/{eventId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
     function isAdmin() {
       return isSignedIn() &&
         request.auth.token.email in [
-          'bryent.daugherty@gmail.com'
+          'bryent.daugherty@gmail.com',
+          'bryent.daugherty@dnr.wa.gov'
         ];
     }
 
@@ -151,8 +159,8 @@ service cloud.firestore {
       // Users can read their own access record
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
       
-      // Admins can read all user access records
-      allow list: if isAdmin();
+      // Any signed-in user can list (needed for username lookup during login)
+      allow list: if isSignedIn();
       
       // New users can create their own access record (during signup)
       allow create: if isSignedIn() && request.auth.uid == uid && 
@@ -160,7 +168,9 @@ service cloud.firestore {
         request.resource.data.keys().hasOnly(['uid', 'email', 'username', 'status', 'role', 'requestedAt']);
       
       // Admins can update any user access (approval)
-      allow update: if isAdmin() && request.resource.data.keys().hasOnly(['uid', 'email', 'username', 'status', 'role', 'requestedAt', 'approvedAt']);
+      allow update: if isAdmin() && 
+        request.resource.data.status in ['pending', 'approved', 'denied'] &&
+        request.resource.data.role in ['user', 'admin', 'super_admin'];
       
       // Admins can delete any user access (denial/removal)
       allow delete: if isAdmin();
