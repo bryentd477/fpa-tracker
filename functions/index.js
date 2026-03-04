@@ -598,6 +598,71 @@ exports.requestUserAccess = onCall({ enforceAppCheck: false }, async (request) =
   return { status: accessStatus, role: accessRole };
 });
 
+exports.setUsername = onCall({ enforceAppCheck: false }, async (request) => {
+  const uid = assertAuth(request);
+  const { limit, windowMs } = RATE_LIMITS.accessRequest;
+  await checkRateLimit(uid, 'setUsername', limit, windowMs);
+
+  const username = ensureString(request.data?.username, 'username');
+  if (!username) {
+    throw new HttpsError('invalid-argument', 'username is required.');
+  }
+
+  if (username.length < 3 || username.length > 32) {
+    throw new HttpsError('invalid-argument', 'Username must be between 3 and 32 characters.');
+  }
+
+  if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+    throw new HttpsError('invalid-argument', 'Username can only contain letters, numbers, underscores, and hyphens.');
+  }
+
+  const normalizedUsername = username.toLowerCase();
+
+  const existingUsername = await db.collection('user_access')
+    .where('usernameLower', '==', normalizedUsername)
+    .limit(1)
+    .get();
+
+  if (!existingUsername.empty && existingUsername.docs[0].id !== uid) {
+    throw new HttpsError('already-exists', 'Username is already taken.');
+  }
+
+  if (existingUsername.empty) {
+    const allUsers = await db.collection('user_access').get();
+    const duplicate = allUsers.docs.find((docSnap) => {
+      if (docSnap.id === uid) return false;
+      const value = (docSnap.data()?.username || '').toString().trim().toLowerCase();
+      return value === normalizedUsername;
+    });
+    if (duplicate) {
+      throw new HttpsError('already-exists', 'Username is already taken.');
+    }
+  }
+
+  const now = admin.firestore.Timestamp.now();
+  const accessRef = db.collection('user_access').doc(uid);
+  const currentAccessSnap = await accessRef.get();
+  const currentAccess = currentAccessSnap.exists ? currentAccessSnap.data() : {};
+
+  await accessRef.set({
+    uid,
+    email: currentAccess?.email || request.auth?.token?.email || null,
+    username: normalizedUsername,
+    usernameLower: normalizedUsername,
+    updatedAt: now,
+    ...(currentAccessSnap.exists
+      ? {}
+      : {
+          status: 'pending',
+          role: 'user',
+          createdAt: now
+        })
+  }, { merge: true });
+
+  logger.info('Username updated', { uid, username: normalizedUsername });
+  return { ok: true, username: normalizedUsername };
+});
+
 exports.resolveEmail = onCall({ enforceAppCheck: false }, async (request) => {
   // assertAppCheck(request); // Disabled - App Check not configured
   const { limit, windowMs } = RATE_LIMITS.accessRequest;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db, auth } from '../utils/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../utils/firebase';
 
 function AccountSettings({ user }) {
   const [username, setUsername] = useState('');
@@ -60,10 +61,14 @@ function AccountSettings({ user }) {
       setError('');
       setMessage('');
 
-      const docRef = doc(db, 'user_access', user.uid);
-      await updateDoc(docRef, {
+      const setUsername = httpsCallable(functions, 'setUsername');
+      const result = await setUsername({
         username: username.trim().toLowerCase()
       });
+
+      if (result?.data?.username) {
+        setUsername(result.data.username);
+      }
 
       setMessage('✓ Username saved successfully!');
       setTimeout(() => setMessage(''), 3000);
