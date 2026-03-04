@@ -159,8 +159,8 @@ service cloud.firestore {
       // Users can read their own access record
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
       
-      // Any signed-in user can list (needed for username lookup during login)
-      allow list: if isSignedIn();
+      // Allow listing for username lookup during login (before full auth)
+      allow list: if true;
       
       // New users can create their own access record (during signup)
       allow create: if isSignedIn() && request.auth.uid == uid && 

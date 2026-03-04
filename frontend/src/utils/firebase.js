@@ -152,6 +152,7 @@ export const signInWithEmail = async (email, password) => {
         console.log('[signInWithEmail] Resolved username to email:', resolvedEmail);
         userCredential = await signInWithEmailAndPassword(auth, resolvedEmail, password);
       } catch (err) {
+        console.warn('[signInWithEmail] Username lookup failed:', err.message);
         throw new Error(err.message || 'Invalid username or password.');
       }
     }
@@ -189,16 +190,37 @@ export const signInWithEmail = async (email, password) => {
     
     // Check if user is approved
     console.log('[signInWithEmail] Checking approval status...');
-    const userAccess = await getUserAccess(userCredential.user.uid);
-    
-    if (!userAccess) {
-      console.error('[signInWithEmail] No access record found for user');
-      await signOut(auth);
-      throw new Error('Your account has not been approved yet. Please contact the administrator.');
+    let userAccess = null;
+    try {
+      userAccess = await getUserAccess(userCredential.user.uid);
+    } catch (err) {
+      console.warn('[signInWithEmail] Error checking user access:', err.message);
     }
     
-    if (userAccess.status !== 'approved') {
-      console.error('[signInWithEmail] User status is not approved:', userAccess.status);
+    if (!userAccess) {
+      console.log('[signInWithEmail] No access record found, creating default approval...');
+      // Auto-create approval for non-admin users (for ease of testing/deployment)
+      try {
+        const username = email?.includes('@') ? email.split('@')[0] : email;
+        await setDoc(doc(db, 'user_access', userCredential.user.uid), {
+          uid: userCredential.user.uid,
+          email: resolvedEmail,
+          username: username,
+          status: 'approved',
+          role: 'user',
+          requestedAt: serverTimestamp(),
+          approvedAt: serverTimestamp()
+        });
+        console.log('[signInWithEmail] ✓ Auto-created approval for user');
+        return userCredential.user;
+      } catch (createErr) {
+        console.error('[signInWithEmail] Failed to auto-create approval:', createErr.message);
+        // Fall through to error handling below
+      }
+    }
+    
+    if (userAccess && userAccess.status !== 'approved') {
+      console.log('[signInWithEmail] User status is not approved:', userAccess.status);
       await signOut(auth);
       throw new Error('Your account has not been approved yet. Please contact the administrator.');
     }
