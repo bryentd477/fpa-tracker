@@ -48,8 +48,20 @@ function Calendar({ userId, onEventsUpdate }) {
       return;
     }
 
+    if (!userId) {
+      console.error('Calendar Error: userId not provided');
+      alert('User not authenticated');
+      return;
+    }
+
     try {
       const eventDateTime = new Date(`${newEvent.date}T${newEvent.time || '00:00'}`);
+      
+      console.log('[Calendar.addEvent] Adding event:', {
+        userId,
+        title: newEvent.title,
+        date: eventDateTime
+      });
       
       await addDoc(collection(db, 'calendar_events'), {
         userId,
@@ -60,12 +72,15 @@ function Calendar({ userId, onEventsUpdate }) {
         createdAt: Timestamp.now()
       });
 
+      console.log('[Calendar.addEvent] Event added successfully');
       setNewEvent({ title: '', description: '', date: '', time: '', type: 'meeting' });
       setShowAddEvent(false);
       fetchEvents();
     } catch (error) {
-      console.error('Error adding event:', error);
-      alert('Failed to add event');
+      console.error('[Calendar.addEvent] Error:', error);
+      console.error('[Calendar.addEvent] Error code:', error.code);
+      console.error('[Calendar.addEvent] Error message:', error.message);
+      alert(`Failed to add event: ${error.message || 'Unknown error'}`);
     }
   };
 

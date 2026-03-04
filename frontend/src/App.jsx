@@ -221,21 +221,32 @@ function App() {
       });
       
       // Handle notes history - append new notes with timestamp
-      const currentFPA = fpas.find(fpa => fpa.id === id) || selectedFPA;
-      const notesHistory = formData.notesHistory || currentFPA?.notes || '';
+      // IMPORTANT: Fetch latest FPA from DB to ensure we have current notes
+      let latestFPA = selectedFPA;
+      if (!latestFPA || latestFPA.id !== id) {
+        try {
+          latestFPA = await getFPA(id);
+        } catch (err) {
+          console.warn('Could not fetch latest FPA, using stale data', err);
+          latestFPA = fpas.find(fpa => fpa.id === id) || selectedFPA;
+        }
+      }
+      
+      const currentNotes = latestFPA?.notes || '';
       const newNotes = formData.notes?.trim() || '';
       
-      if (newNotes) {
-        // If there are new notes, combine with history
+      if (newNotes && newNotes !== currentNotes) {
+        // If there are new notes different from current, combine with history
         const timestamp = new Date().toLocaleString();
-        formData.notes = notesHistory ? `${notesHistory}\n[${timestamp}] ${newNotes}` : `[${timestamp}] ${newNotes}`;
-      } else if (notesHistory && !newNotes) {
+        formData.notes = currentNotes ? `${currentNotes}\n[${timestamp}] ${newNotes}` : `[${timestamp}] ${newNotes}`;
+      } else if (!newNotes && currentNotes) {
         // If editing but no new notes, preserve the history
-        formData.notes = notesHistory;
+        formData.notes = currentNotes;
       }
       // Remove the temporary notesHistory field as it's not needed in DB
       delete formData.notesHistory;
       
+      console.log('[App.handleUpdateFPA] Final notes to save:', formData.notes);
       await updateFPA(id, formData);
       await fetchFPAs();
       if (selectedFPA) {
@@ -641,10 +652,10 @@ function App() {
             <button 
               className="btn-secondary"
               onClick={() => navigateToView('settings')}
-              style={{ fontSize: '12px', padding: '8px 12px' }}
+              style={{ fontSize: '14px', padding: '10px 14px', marginRight: '8px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer' }}
               title="Account Settings"
             >
-              ⚙️
+              ⚙️ Settings
             </button>
             <button 
               className="btn-logout"
