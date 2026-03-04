@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, where, Timestamp } from 'firebase/firestore';
-import { db } from '../utils/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../utils/firebase';
 
 function Calendar({ userId, onEventsUpdate }) {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -62,14 +63,13 @@ function Calendar({ userId, onEventsUpdate }) {
         title: newEvent.title,
         date: eventDateTime
       });
-      
-      await addDoc(collection(db, 'calendar_events'), {
-        userId,
+
+      const addCalendarEvent = httpsCallable(functions, 'addCalendarEvent');
+      await addCalendarEvent({
         title: newEvent.title,
         description: newEvent.description,
-        date: Timestamp.fromDate(eventDateTime),
-        type: newEvent.type,
-        createdAt: Timestamp.now()
+        date: eventDateTime.toISOString(),
+        type: newEvent.type
       });
 
       console.log('[Calendar.addEvent] Event added successfully');

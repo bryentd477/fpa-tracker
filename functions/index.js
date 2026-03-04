@@ -472,6 +472,44 @@ exports.deleteRenewal = onCall({ enforceAppCheck: false }, async (request) => {
   return { ok: true };
 });
 
+exports.addCalendarEvent = onCall({ enforceAppCheck: false }, async (request) => {
+  const uid = assertAuth(request);
+  const { limit, windowMs } = RATE_LIMITS.activityWrite;
+  await checkRateLimit(uid, 'calendarWrite', limit, windowMs);
+
+  const title = ensureString(request.data?.title, 'title');
+  const description = ensureString(request.data?.description, 'description') || '';
+  const type = ensureString(request.data?.type, 'type') || 'meeting';
+  const dateInput = ensureString(request.data?.date, 'date');
+
+  if (!title) {
+    throw new HttpsError('invalid-argument', 'title is required.');
+  }
+
+  if (!dateInput) {
+    throw new HttpsError('invalid-argument', 'date is required.');
+  }
+
+  const parsedDate = new Date(dateInput);
+  if (Number.isNaN(parsedDate.getTime())) {
+    throw new HttpsError('invalid-argument', 'date must be a valid date string.');
+  }
+
+  const now = admin.firestore.Timestamp.now();
+  const docRef = await db.collection('calendar_events').add({
+    userId: uid,
+    title,
+    description,
+    type,
+    date: admin.firestore.Timestamp.fromDate(parsedDate),
+    createdAt: now,
+    updatedAt: now
+  });
+
+  logger.info('Calendar event created', { uid, eventId: docRef.id, type });
+  return { ok: true, id: docRef.id };
+});
+
 exports.addApprovedActivity = onCall({ enforceAppCheck: false }, async (request) => {
   // assertAppCheck(request); // Disabled - App Check not configured
   const uid = assertAuth(request);
