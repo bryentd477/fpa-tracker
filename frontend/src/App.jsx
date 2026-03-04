@@ -7,7 +7,7 @@ import FPADetail from './components/FPADetail';
 import SearchBar from './components/SearchBar';
 import ReportGenerator from './components/ReportGenerator';
 import UserManagement from './components/UserManagement';
-import AccountSettings from './components/AccountSettings';
+import AccountSettings from './components/AccountSettings'; // Account Settings for user profile management
 import Login from './components/Login';
 import ChatAssistant from './components/ChatAssistant';
 import MapViewer from './components/MapViewer';
